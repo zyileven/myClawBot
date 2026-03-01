@@ -16,11 +16,15 @@ export default function Home() {
 
   // 从 localStorage 加载
   useEffect(() => {
-    setMounted(true);
     const saved = localStorage.getItem("todos");
     if (saved) {
-      setTodos(JSON.parse(saved));
+      try {
+        setTodos(JSON.parse(saved));
+      } catch (e) {
+        console.error("Failed to parse todos:", e);
+      }
     }
+    setMounted(true);
   }, []);
 
   // 保存到 localStorage
@@ -61,15 +65,15 @@ export default function Home() {
   const completedCount = todos.filter((t) => t.completed).length;
   const totalCount = todos.length;
 
-  if (!mounted) return null;
-
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      <div className="container mx-auto px-4 py-12 max-w-2xl">
+    <main style={{ minHeight: "100vh", background: "linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)" }}>
+      <div style={{ maxWidth: "42rem", margin: "0 auto", padding: "3rem 1rem" }}>
         {/* Header */}
-        <div className="text-center mb-10">
-          <h1 className="text-4xl font-bold text-white mb-2">📝 Todo List</h1>
-          <p className="text-slate-400">
+        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+          <h1 style={{ fontSize: "2.25rem", fontWeight: "bold", color: "white", marginBottom: "0.5rem" }}>
+            📝 Todo List
+          </h1>
+          <p style={{ color: "#94a3b8" }}>
             {totalCount > 0
               ? `${completedCount} / ${totalCount} 已完成`
               : "添加你的第一个任务"}
@@ -77,18 +81,34 @@ export default function Home() {
         </div>
 
         {/* Input */}
-        <div className="flex gap-3 mb-8">
+        <div style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem" }}>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && addTodo()}
             placeholder="输入新任务..."
-            className="flex-1 px-5 py-4 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+            style={{
+              flex: 1,
+              padding: "1rem 1.25rem",
+              borderRadius: "1rem",
+              background: "rgba(255,255,255,0.1)",
+              border: "1px solid rgba(255,255,255,0.2)",
+              color: "white",
+              outline: "none",
+            }}
           />
           <button
             onClick={addTodo}
-            className="px-6 py-4 rounded-2xl bg-purple-600 hover:bg-purple-500 text-white font-medium transition-all hover:scale-105 active:scale-95 shadow-lg shadow-purple-500/30"
+            style={{
+              padding: "1rem 1.5rem",
+              borderRadius: "1rem",
+              background: "#9333ea",
+              color: "white",
+              fontWeight: 500,
+              border: "none",
+              cursor: "pointer",
+            }}
           >
             添加
           </button>
@@ -96,14 +116,14 @@ export default function Home() {
 
         {/* Stats Bar */}
         {todos.length > 0 && (
-          <div className="flex justify-between items-center mb-4 px-2">
-            <span className="text-sm text-slate-400">
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "1rem", padding: "0 0.5rem" }}>
+            <span style={{ fontSize: "0.875rem", color: "#94a3b8" }}>
               {todos.length} 个任务
             </span>
             {completedCount > 0 && (
               <button
                 onClick={clearCompleted}
-                className="text-sm text-slate-400 hover:text-red-400 transition-colors"
+                style={{ fontSize: "0.875rem", color: "#94a3b8", background: "none", border: "none", cursor: "pointer" }}
               >
                 清除已完成
               </button>
@@ -112,70 +132,64 @@ export default function Home() {
         )}
 
         {/* Todo List */}
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           {todos.map((todo) => (
             <div
               key={todo.id}
-              className={`group flex items-center gap-4 p-4 rounded-2xl backdrop-blur-sm border transition-all ${
-                todo.completed
-                  ? "bg-white/5 border-white/10"
-                  : "bg-white/10 border-white/20 hover:bg-white/15"
-              }`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "1rem",
+                padding: "1rem",
+                borderRadius: "1rem",
+                background: todo.completed ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.1)",
+                border: `1px solid ${todo.completed ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.2)"}`,
+              }}
             >
               {/* Checkbox */}
               <button
                 onClick={() => toggleTodo(todo.id)}
-                className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${
-                  todo.completed
-                    ? "bg-green-500 border-green-500"
-                    : "border-slate-400 hover:border-purple-400"
-                }`}
+                style={{
+                  width: "1.5rem",
+                  height: "1.5rem",
+                  borderRadius: "50%",
+                  border: `2px solid ${todo.completed ? "#22c55e" : "#94a3b8"}`,
+                  background: todo.completed ? "#22c55e" : "transparent",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                }}
               >
                 {todo.completed && (
-                  <svg
-                    className="w-4 h-4 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={3}
-                      d="M5 13l4 4L19 7"
-                    />
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <path d="M5 13l4 4L19 7" />
                   </svg>
                 )}
               </button>
 
               {/* Text */}
-              <span
-                className={`flex-1 transition-all ${
-                  todo.completed
-                    ? "text-slate-500 line-through"
-                    : "text-white"
-                }`}
-              >
+              <span style={{
+                flex: 1,
+                color: todo.completed ? "#64748b" : "white",
+                textDecoration: todo.completed ? "line-through" : "none",
+              }}>
                 {todo.text}
               </span>
 
               {/* Delete Button */}
               <button
                 onClick={() => deleteTodo(todo.id)}
-                className="opacity-0 group-hover:opacity-100 p-2 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all"
+                style={{
+                  padding: "0.5rem",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  color: "#94a3b8",
+                }}
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </button>
             </div>
@@ -184,9 +198,9 @@ export default function Home() {
 
         {/* Empty State */}
         {todos.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-6xl mb-4">✨</div>
-            <p className="text-slate-400">暂无任务，开始添加吧！</p>
+          <div style={{ textAlign: "center", padding: "4rem 0" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>✨</div>
+            <p style={{ color: "#94a3b8" }}>暂无任务，开始添加吧！</p>
           </div>
         )}
       </div>
