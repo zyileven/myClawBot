@@ -66,7 +66,7 @@ export default function Home() {
   const totalCount = todos.length;
 
   return (
-    <main style={{ minHeight: "100vh", background: "linear-gradient(to bottom right, #0f172a, #581c87, #0f172a)" }}>
+    <main style={{ minHeight: "100vh", background: "#0f172a" }}>
       <div style={{ maxWidth: "42rem", margin: "0 auto", padding: "3rem 1rem" }}>
         {/* Header */}
         <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
