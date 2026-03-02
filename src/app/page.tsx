@@ -2,6 +2,13 @@
 
 import { useState, useEffect } from "react";
 
+interface User {
+  id: string;
+  username: string;
+  password: string;
+  createdAt: number;
+}
+
 interface Todo {
   id: string;
   text: string;
@@ -9,31 +16,142 @@ interface Todo {
   createdAt: number;
 }
 
+type View = "login" | "register" | "todos";
+
 export default function Home() {
+  const [view, setView] = useState<View>("login");
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [todos, setTodos] = useState<Todo[]>([]);
-  const [input, setInput] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  // 从 localStorage 加载
+  // 表单状态
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [input, setInput] = useState("");
+  const [error, setError] = useState("");
+
+  // 初始化：检查是否已登录
   useEffect(() => {
-    const saved = localStorage.getItem("todos");
-    if (saved) {
+    const savedUser = localStorage.getItem("currentUser");
+    if (savedUser) {
       try {
-        setTodos(JSON.parse(saved));
+        const user = JSON.parse(savedUser);
+        setCurrentUser(user);
+        setView("todos");
+        // 加载该用户的 todos
+        const savedTodos = localStorage.getItem(`todos_${user.id}`);
+        if (savedTodos) {
+          setTodos(JSON.parse(savedTodos));
+        }
       } catch (e) {
-        console.error("Failed to parse todos:", e);
+        console.error("Failed to parse user:", e);
       }
     }
     setMounted(true);
   }, []);
 
-  // 保存到 localStorage
+  // 保存 todos
   useEffect(() => {
-    if (mounted) {
-      localStorage.setItem("todos", JSON.stringify(todos));
+    if (mounted && currentUser) {
+      localStorage.setItem(`todos_${currentUser.id}`, JSON.stringify(todos));
     }
-  }, [todos, mounted]);
+  }, [todos, currentUser, mounted]);
 
+  // 获取所有用户
+  const getUsers = (): User[] => {
+    const saved = localStorage.getItem("users");
+    return saved ? JSON.parse(saved) : [];
+  };
+
+  // 保存用户列表
+  const saveUsers = (users: User[]) => {
+    localStorage.setItem("users", JSON.stringify(users));
+  };
+
+  // 注册
+  const handleRegister = () => {
+    setError("");
+    if (!username.trim() || !password.trim()) {
+      setError("用户名和密码不能为空");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("两次密码不一致");
+      return;
+    }
+    if (password.length < 4) {
+      setError("密码至少4位");
+      return;
+    }
+
+    const users = getUsers();
+    if (users.find(u => u.username === username.trim())) {
+      setError("用户名已存在");
+      return;
+    }
+
+    const newUser: User = {
+      id: crypto.randomUUID(),
+      username: username.trim(),
+      password: password,
+      createdAt: Date.now(),
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    // 自动登录
+    setCurrentUser(newUser);
+    localStorage.setItem("currentUser", JSON.stringify(newUser));
+    setTodos([]);
+    setView("todos");
+    setUsername("");
+    setPassword("");
+    setConfirmPassword("");
+  };
+
+  // 登录
+  const handleLogin = () => {
+    setError("");
+    if (!username.trim() || !password.trim()) {
+      setError("用户名和密码不能为空");
+      return;
+    }
+
+    const users = getUsers();
+    const user = users.find(u => u.username === username.trim() && u.password === password);
+
+    if (!user) {
+      setError("用户名或密码错误");
+      return;
+    }
+
+    setCurrentUser(user);
+    localStorage.setItem("currentUser", JSON.stringify(user));
+
+    // 加载该用户的 todos
+    const savedTodos = localStorage.getItem(`todos_${user.id}`);
+    if (savedTodos) {
+      setTodos(JSON.parse(savedTodos));
+    } else {
+      setTodos([]);
+    }
+
+    setView("todos");
+    setUsername("");
+    setPassword("");
+  };
+
+  // 退出登录
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("currentUser");
+    setTodos([]);
+    setView("login");
+  };
+
+  // Todo 操作
   const addTodo = () => {
     if (input.trim() === "") return;
     const newTodo: Todo = {
@@ -65,20 +183,185 @@ export default function Home() {
   const completedCount = todos.filter((t) => t.completed).length;
   const totalCount = todos.length;
 
+  if (!mounted) return null;
+
+  // 登录/注册页面样式
+  const inputStyle = {
+    width: "100%",
+    padding: "1rem 1.25rem",
+    borderRadius: "0.75rem",
+    background: "rgba(255,255,255,0.1)",
+    border: "1px solid rgba(255,255,255,0.2)",
+    color: "white",
+    outline: "none",
+    fontSize: "1rem",
+  };
+
+  const buttonStyle = {
+    width: "100%",
+    padding: "1rem",
+    borderRadius: "0.75rem",
+    background: "#42b883",
+    color: "white",
+    fontWeight: 600,
+    border: "none",
+    cursor: "pointer",
+    fontSize: "1rem",
+  };
+
+  const linkButtonStyle = {
+    background: "none",
+    border: "none",
+    color: "#42b883",
+    cursor: "pointer",
+    fontSize: "0.875rem",
+    padding: 0,
+  };
+
+  // 登录页面
+  if (view === "login") {
+    return (
+      <main style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: "100%", maxWidth: "24rem", padding: "2rem" }}>
+          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+            <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "white", marginBottom: "0.5rem" }}>
+              📝 Todo List
+            </h1>
+            <p style={{ color: "#94a3b8" }}>登录以管理你的任务</p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <input
+              type="text"
+              placeholder="用户名"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              placeholder="密码"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              style={inputStyle}
+            />
+
+            {error && (
+              <p style={{ color: "#ef4444", fontSize: "0.875rem", margin: 0 }}>{error}</p>
+            )}
+
+            <button onClick={handleLogin} style={buttonStyle}>
+              登录
+            </button>
+
+            <div style={{ textAlign: "center", marginTop: "1rem" }}>
+              <span style={{ color: "#94a3b8" }}>没有账号？</span>
+              <button onClick={() => { setView("register"); setError(""); }} style={linkButtonStyle}>
+                立即注册
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // 注册页面
+  if (view === "register") {
+    return (
+      <main style={{ minHeight: "100vh", background: "#0f172a", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: "100%", maxWidth: "24rem", padding: "2rem" }}>
+          <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+            <h1 style={{ fontSize: "2rem", fontWeight: "bold", color: "white", marginBottom: "0.5rem" }}>
+              📝 创建账号
+            </h1>
+            <p style={{ color: "#94a3b8" }}>注册以开始使用</p>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <input
+              type="text"
+              placeholder="用户名"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              placeholder="密码"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+              style={inputStyle}
+            />
+            <input
+              type="password"
+              placeholder="确认密码"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRegister()}
+              style={inputStyle}
+            />
+
+            {error && (
+              <p style={{ color: "#ef4444", fontSize: "0.875rem", margin: 0 }}>{error}</p>
+            )}
+
+            <button onClick={handleRegister} style={buttonStyle}>
+              注册
+            </button>
+
+            <div style={{ textAlign: "center", marginTop: "1rem" }}>
+              <span style={{ color: "#94a3b8" }}>已有账号？</span>
+              <button onClick={() => { setView("login"); setError(""); }} style={linkButtonStyle}>
+                立即登录
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  // Todo 列表页面
   return (
     <main style={{ minHeight: "100vh", background: "#0f172a" }}>
       <div style={{ maxWidth: "42rem", margin: "0 auto", padding: "3rem 1rem" }}>
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
-          <h1 style={{ fontSize: "2.25rem", fontWeight: "bold", color: "white", marginBottom: "0.5rem" }}>
-            📝 Todo List
-          </h1>
-          <p style={{ color: "#94a3b8" }}>
-            {totalCount > 0
-              ? `${completedCount} / ${totalCount} 已完成`
-              : "添加你的第一个任务"}
-          </p>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2.5rem" }}>
+          <div>
+            <h1 style={{ fontSize: "2.25rem", fontWeight: "bold", color: "white", marginBottom: "0.25rem" }}>
+              📝 Todo List
+            </h1>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              欢迎，{currentUser?.username}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "0.5rem 1rem",
+              borderRadius: "0.5rem",
+              background: "rgba(255,255,255,0.1)",
+              color: "#94a3b8",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "0.875rem",
+            }}
+          >
+            退出
+          </button>
         </div>
+
+        {/* 进度 */}
+        <p style={{ color: "#94a3b8", marginBottom: "2rem" }}>
+          {totalCount > 0
+            ? `${completedCount} / ${totalCount} 已完成`
+            : "添加你的第一个任务"}
+        </p>
 
         {/* Input */}
         <div style={{ display: "flex", gap: "0.75rem", marginBottom: "2rem" }}>
@@ -153,12 +436,13 @@ export default function Home() {
                   width: "1.5rem",
                   height: "1.5rem",
                   borderRadius: "50%",
-                  border: `2px solid ${todo.completed ? "#22c55e" : "#94a3b8"}`,
-                  background: todo.completed ? "#22c55e" : "transparent",
+                  border: `2px solid ${todo.completed ? "#42b883" : "#94a3b8"}`,
+                  background: todo.completed ? "#42b883" : "transparent",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   cursor: "pointer",
+                  flexShrink: 0,
                 }}
               >
                 {todo.completed && (
@@ -186,6 +470,7 @@ export default function Home() {
                   border: "none",
                   cursor: "pointer",
                   color: "#94a3b8",
+                  flexShrink: 0,
                 }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
